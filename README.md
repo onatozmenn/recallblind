@@ -1,13 +1,16 @@
 # RecallBlind
 
+[![tests](https://github.com/onatozmenn/recallblind/actions/workflows/tests.yml/badge.svg)](https://github.com/onatozmenn/recallblind/actions/workflows/tests.yml)
+
 **Do AI shopping assistants know which products have been recalled?**
 
 RecallBlind is an open benchmark that measures whether large language models and
 AI shopping agents recommend, or fail to warn about, consumer products that have
 been officially recalled for safety reasons.
 
-> **Status:** early development. Data pipeline works; benchmark tasks not yet built.
-> See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status:** early development. All four tasks build and score against a
+> validated harness; no model has been evaluated yet, and the human-annotated
+> gold set is still outstanding. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
