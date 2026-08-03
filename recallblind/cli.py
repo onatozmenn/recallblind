@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections import Counter
 from datetime import date
 from pathlib import Path
 
 from . import adapters, campaign, gold, hazards, ingest_cpsc, ingest_oecd, negatives, tasks
-from .evaluate import score, write_report
+from .evaluate import score, select_items, write_report
 from .extract_identifiers import build as build_identifiers
 from .index import build_index
 from .remedies import MINIMISING_RE
@@ -83,16 +84,28 @@ def cmd_eval(args: argparse.Namespace) -> None:
         raise SystemExit("run `tasks` first")
     items = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
+    items = select_items(items, args.task, args.limit)
+    if not items:
+        raise SystemExit("no items selected")
+
+    module = None
     if args.adapter == "lookup_baseline":
         answer = adapters.lookup_baseline(_load_index())
     elif args.adapter in adapters.BUILTIN:
         answer = adapters.BUILTIN[args.adapter]
     else:
-        answer = adapters.load_custom(Path(args.adapter))
+        answer, module = adapters.load_custom(Path(args.adapter), with_module=True)
 
+    # Progress goes to stderr so stdout stays parseable JSON.
+    print(f"scoring {len(items)} items with {args.adapter}", file=sys.stderr, flush=True)
     report = score(items, answer)
     report["adapter"] = Path(args.adapter).stem
     report["evaluated_at"] = date.today().isoformat()
+    if module is not None and hasattr(module, "usage"):
+        report["usage"] = module.usage()
+    if module is not None and hasattr(module, "MODEL"):
+        report["model"] = module.MODEL
+
     summary = {key: value for key, value in report.items() if key != "rows"}
     write_report(report, RESULTS, Path(args.adapter).stem)
     print(json.dumps(summary, indent=2, ensure_ascii=False))
@@ -238,6 +251,8 @@ def main() -> None:
 
     ev = sub.add_parser("eval", help="score an adapter")
     ev.add_argument("adapter", help="builtin name, 'lookup_baseline', or path to a .py adapter")
+    ev.add_argument("--limit", type=int, default=None, help="pilot run: cap items, spread across tasks")
+    ev.add_argument("--task", nargs="+", default=None, help="restrict to given tasks, e.g. T1 T2")
     ev.set_defaults(func=cmd_eval)
 
     sub.add_parser("stats", help="summarise normalized data").set_defaults(func=cmd_stats)

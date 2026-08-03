@@ -68,8 +68,17 @@ annotations that cannot be regenerated.
 Write a module exposing `answer(prompt: str) -> str`, then:
 
 ```bash
-python -m recallblind.cli eval path/to/my_adapter.py
+python -m recallblind.cli eval path/to/my_adapter.py --limit 40   # pilot first
+python -m recallblind.cli eval path/to/my_adapter.py              # full run
 ```
+
+`examples/chat_adapter.py` is a working OpenAI-compatible adapter. Put the key in
+`secrets/openai.key` with an editor rather than typing it into a shell; that path
+is gitignored. `examples/list_models.py` prints the models the key can reach.
+
+A full run is 1,400 prompts, roughly 300,000 tokens including completions, so on a
+small model it costs cents. `--limit` spreads a pilot evenly across the four tasks
+so the label balance survives.
 
 ## Harness validation
 

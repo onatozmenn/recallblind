@@ -3,11 +3,17 @@ data/*
 results/
 *.jsonl
 
+# Credentials. Put the key in secrets/openai.key using the editor, never by
+# typing it into a terminal: shell history leaks in ways files do not.
+secrets/
+*.key
+.env
+.env.*
+
 __pycache__/
 *.py[cod]
 .venv/
 venv/
-.env
 
 .vscode/
 .idea/

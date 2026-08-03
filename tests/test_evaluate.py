@@ -15,6 +15,7 @@ from recallblind.evaluate import (
     score,
     score_action,
     score_notice,
+    select_items,
 )
 from recallblind.remedies import (
     MINIMISING_RE,
@@ -168,6 +169,39 @@ class NoticeScoring(unittest.TestCase):
         self.assertTrue(
             score_notice(item, "Acme has recalled this unit.")["elements"]["product_described"]
         )
+
+
+class PilotSelection(unittest.TestCase):
+    def setUp(self):
+        self.items = [
+            make_item(task, item_id=f"{task}-{i}")
+            for task in ("T1", "T2", "T3", "T4")
+            for i in range(50)
+        ]
+
+    def test_no_limit_returns_everything(self):
+        self.assertEqual(len(select_items(self.items)), 200)
+
+    def test_limit_spreads_across_tasks(self):
+        picked = select_items(self.items, limit=40)
+        counts = {task: sum(1 for row in picked if row["task"] == task) for task in ("T1", "T2", "T3", "T4")}
+        self.assertEqual(set(counts.values()), {10})
+
+    def test_task_filter(self):
+        picked = select_items(self.items, tasks=["t1", "T2"])
+        self.assertEqual({row["task"] for row in picked}, {"T1", "T2"})
+
+    def test_filter_and_limit_together(self):
+        picked = select_items(self.items, tasks=["T1", "T2"], limit=10)
+        self.assertEqual(len(picked), 10)
+        self.assertEqual({row["task"] for row in picked}, {"T1", "T2"})
+
+    def test_limit_below_task_count_still_returns_one_each(self):
+        picked = select_items(self.items, limit=2)
+        self.assertEqual(len(picked), 4)
+
+    def test_unknown_task_selects_nothing(self):
+        self.assertEqual(select_items(self.items, tasks=["T9"]), [])
 
 
 class HarnessPins(unittest.TestCase):

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -169,10 +170,36 @@ def _verdict_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def select_items(
+    items: list[dict[str, Any]], tasks: Iterable[str] | None = None, limit: int | None = None
+) -> list[dict[str, Any]]:
+    """Pick a subset for a pilot run, keeping every task represented.
+
+    Taking the first N of a shuffled file would skew the task mix and, worse,
+    the label balance inside T1 and T2.
+    """
+    if tasks:
+        wanted = {task.upper() for task in tasks}
+        items = [item for item in items if item["task"] in wanted]
+    if not limit:
+        return items
+
+    by_task: dict[str, list[dict[str, Any]]] = {}
+    for item in items:
+        by_task.setdefault(item["task"], []).append(item)
+    if not by_task:
+        return []
+
+    share = max(1, limit // len(by_task))
+    return [item for task in sorted(by_task) for item in by_task[task][:share]]
+
+
 def score(items: Iterable[dict[str, Any]], answer: Callable[[str], str]) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     for item in items:
+        started = time.perf_counter()
         response = answer(item["prompt"])
+        elapsed = time.perf_counter() - started
         task = item.get("task", "T1")
         row: dict[str, Any] = {
             "item_id": item["item_id"],
@@ -182,6 +209,7 @@ def score(items: Iterable[dict[str, Any]], answer: Callable[[str], str]) -> dict
             "family": item["family"],
             "strata": item["strata"],
             "minimising_language": bool(MINIMISING_RE.search(response)),
+            "latency_s": round(elapsed, 3),
             "response": response[:800],
         }
 
@@ -203,6 +231,13 @@ def score(items: Iterable[dict[str, Any]], answer: Callable[[str], str]) -> dict
         "n": len(rows),
         "n_by_task": {task: len(subset) for task, subset in sorted(by_task.items())},
     }
+    if rows:
+        latencies = sorted(row["latency_s"] for row in rows)
+        report["latency_s"] = {
+            "total": round(sum(latencies), 2),
+            "mean": round(sum(latencies) / len(latencies), 3),
+            "p95": latencies[min(len(latencies) - 1, int(len(latencies) * 0.95))],
+        }
     report.update(_verdict_report(by_task["T1"] + by_task["T2"]))
 
     action_rows = by_task["T3"]

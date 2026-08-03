@@ -1,9 +1,10 @@
 """Worked example of a model adapter.
 
-Copy this, point it at whichever chat API you use, then:
+Put your key in `secrets/openai.key` **using the editor**, not by typing it into
+a terminal: shell history is stored, replayed and often shared. That path is
+gitignored. Then:
 
-    setx RECALLBLIND_API_KEY ...        # or export, on a shell that is not logged
-    python -m recallblind.cli eval examples/chat_adapter.py
+    python -m recallblind.cli eval examples/chat_adapter.py --limit 50
 
 An adapter is any module exposing `answer(prompt: str) -> str`. Nothing else is
 required, and nothing here is imported by the package itself.
@@ -19,11 +20,23 @@ import os
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 API_URL = os.environ.get("RECALLBLIND_API_URL", "https://api.openai.com/v1/chat/completions")
 MODEL = os.environ.get("RECALLBLIND_MODEL", "gpt-4o-mini")
-# Never hard-code a key. Never print one: benchmark logs are meant to be published.
-API_KEY = os.environ.get("RECALLBLIND_API_KEY", "")
+KEY_FILE = Path(os.environ.get("RECALLBLIND_KEY_FILE", "secrets/openai.key"))
+
+
+def _api_key() -> str:
+    """Environment first, then the gitignored file. Never logged either way."""
+    key = os.environ.get("RECALLBLIND_API_KEY", "").strip()
+    if key:
+        return key
+    if KEY_FILE.exists():
+        return KEY_FILE.read_text(encoding="utf-8").strip()
+    raise SystemExit(
+        f"no API key: put it in {KEY_FILE} with your editor, or set RECALLBLIND_API_KEY"
+    )
 
 SYSTEM = (
     "You are a consumer product safety assistant. Answer only from what you know "
@@ -41,7 +54,7 @@ def _post(payload: dict) -> dict:
         API_URL,
         data=json.dumps(payload).encode("utf-8"),
         headers={
-            "Authorization": f"Bearer {API_KEY}",
+            "Authorization": f"Bearer {_api_key()}",
             "Content-Type": "application/json",
         },
         method="POST",
@@ -50,10 +63,15 @@ def _post(payload: dict) -> dict:
         return json.loads(response.read().decode("utf-8"))
 
 
-def answer(prompt: str) -> str:
-    if not API_KEY:
-        raise SystemExit("set RECALLBLIND_API_KEY in the environment")
+# Populated as the run proceeds so the harness can report real token cost.
+USAGE = {"input_tokens": 0, "output_tokens": 0, "calls": 0}
 
+
+def usage() -> dict:
+    return dict(USAGE)
+
+
+def answer(prompt: str) -> str:
     payload = {
         "model": MODEL,
         "temperature": TEMPERATURE,
@@ -66,6 +84,10 @@ def answer(prompt: str) -> str:
     for attempt in range(RETRIES):
         try:
             body = _post(payload)
+            counted = body.get("usage") or {}
+            USAGE["input_tokens"] += counted.get("prompt_tokens", 0)
+            USAGE["output_tokens"] += counted.get("completion_tokens", 0)
+            USAGE["calls"] += 1
             return body["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as error:
             # Rate limits and 5xx are worth retrying; a bad request is not.

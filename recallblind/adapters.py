@@ -139,7 +139,7 @@ BUILTIN: dict[str, Adapter] = {
 }
 
 
-def load_custom(path: Path) -> Adapter:
+def load_custom(path: Path, with_module: bool = False):
     spec = importlib.util.spec_from_file_location("rb_adapter", path)
     if spec is None or spec.loader is None:
         raise ValueError(f"cannot load adapter from {path}")
@@ -147,4 +147,4 @@ def load_custom(path: Path) -> Adapter:
     spec.loader.exec_module(module)
     if not hasattr(module, "answer"):
         raise ValueError(f"{path} must define answer(prompt: str) -> str")
-    return module.answer
+    return (module.answer, module) if with_module else module.answer
