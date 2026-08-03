@@ -8,7 +8,7 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 
-from . import adapters, ingest_cpsc, ingest_oecd, negatives, tasks
+from . import adapters, gold, ingest_cpsc, ingest_oecd, negatives, tasks
 from .evaluate import score, write_report
 from .extract_identifiers import build as build_identifiers
 from .index import build_index
@@ -19,6 +19,7 @@ RAW = DATA / "raw"
 NORMALIZED = DATA / "normalized"
 DERIVED = DATA / "derived"
 BENCH = DATA / "benchmark"
+GOLD = DATA / "gold"
 RESULTS = Path("results")
 
 
@@ -93,6 +94,33 @@ def cmd_eval(args: argparse.Namespace) -> None:
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
 
+def cmd_gold_sample(args: argparse.Namespace) -> None:
+    path = NORMALIZED / "cpsc.jsonl"
+    if not path.exists():
+        raise SystemExit("run `cpsc` first")
+    report = gold.build_sample(list(read_jsonl(path)), BENCH / "gold_sample.jsonl", size=args.size)
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+
+
+def cmd_annotate(args: argparse.Namespace) -> None:
+    sample = BENCH / "gold_sample.jsonl"
+    if not sample.exists():
+        raise SystemExit("run `gold-sample` first")
+    gold.annotate(sample, GOLD / f"{args.annotator}.jsonl", args.annotator, limit=args.limit)
+
+
+def cmd_agreement(args: argparse.Namespace) -> None:
+    print(json.dumps(gold.cohens_kappa(Path(args.first), Path(args.second)), indent=2))
+
+
+def cmd_extractor_score(args: argparse.Namespace) -> None:
+    paths = [Path(path) for path in args.annotations]
+    missing = [str(path) for path in paths if not path.exists()]
+    if missing:
+        raise SystemExit(f"missing annotation files: {', '.join(missing)}")
+    print(json.dumps(gold.score_extractor(paths), indent=2))
+
+
 def cmd_stats(_: argparse.Namespace) -> None:
     for name in ("cpsc", "oecd"):
         path = NORMALIZED / f"{name}.jsonl"
@@ -137,6 +165,24 @@ def main() -> None:
     ev.set_defaults(func=cmd_eval)
 
     sub.add_parser("stats", help="summarise normalized data").set_defaults(func=cmd_stats)
+
+    sample = sub.add_parser("gold-sample", help="draw the deterministic annotation sample")
+    sample.add_argument("--size", type=int, default=300)
+    sample.set_defaults(func=cmd_gold_sample)
+
+    annotate = sub.add_parser("annotate", help="label extracted identifiers by hand")
+    annotate.add_argument("annotator", help="your name; one file per annotator")
+    annotate.add_argument("--limit", type=int, default=None, help="items to label this session")
+    annotate.set_defaults(func=cmd_annotate)
+
+    agreement = sub.add_parser("agreement", help="Cohen's kappa between two annotators")
+    agreement.add_argument("first")
+    agreement.add_argument("second")
+    agreement.set_defaults(func=cmd_agreement)
+
+    extractor = sub.add_parser("extractor-score", help="precision/recall/F1 against the gold set")
+    extractor.add_argument("annotations", nargs="+")
+    extractor.set_defaults(func=cmd_extractor_score)
 
     args = parser.parse_args()
     args.func(args)

@@ -19,9 +19,13 @@ measurement.
 ## Milestone 2 — Identifier extraction `IN PROGRESS`
 
 Baseline regex extractor exists at 52.4% coverage on 1,081 CPSC recalls.
+Annotation tooling is built; the labelling itself is the remaining work.
 
-- [ ] Gold set: 300 recalls labelled by two annotators, adjudicated
-- [ ] Report baseline precision / recall / $F_1$ against the gold set
+- [x] Deterministic 300-record sample, fixed seed, reproducible without sharing files
+- [x] Annotation CLI with resume, plus a written labelling rule in `data/gold/README.md`
+- [x] Cohen's $\kappa$ and micro-averaged precision / recall / $F_1$, self-checked
+- [ ] Two independent annotation passes over the sample
+- [ ] Adjudicate disagreements and report baseline $F_1$
 - [ ] LLM-assisted extractor, measured on the same gold set
 - [ ] Keep whichever wins; publish both numbers
 

@@ -1,5 +1,5 @@
-# Data is re-fetchable from public APIs; never commit it.
-data/
+# Generated data is re-fetchable from public APIs; never commit it.
+data/*
 *.jsonl
 
 __pycache__/
@@ -11,3 +11,8 @@ venv/
 .vscode/
 .idea/
 .DS_Store
+
+# Human annotations are the one exception: they cost hours of expert time and
+# cannot be regenerated. Keep them under version control.
+!data/gold/
+!data/gold/*.jsonl
