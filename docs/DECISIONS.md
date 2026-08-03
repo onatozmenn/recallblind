@@ -177,3 +177,25 @@ consumer products exists to do better.
 **Consequence:** BOR measures over-generalisation from brand and code resemblance,
 which is the marketplace failure we care about. It does not measure real catalogue
 discrimination, and results must not be described as if it did.
+
+---
+
+## ADR-012 — The hazard taxonomy labels mechanism, not outcome
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+CPSC hazard prose puts both in one sentence: "posing a risk of serious injury or
+death from fire". Counting phrases across 1,081 recalls, "serious injury or death"
+and its variants are among the most frequent strings in the corpus, but they name
+no cause. A taxonomy that admits them collapses: almost every recall becomes
+"injury".
+
+The label set is therefore eleven mechanisms — how the product hurts someone —
+drafted from the measured phrasing rather than from intuition. Severity is
+recorded as a separate field with values `death`, `serious_injury` and `injury`.
+
+**Consequence:** categories stay discriminative and stratified reporting is
+meaningful. The draft covers 97.7% of records; the residual states only "an injury
+hazard" with no mechanism at all, which a human must infer from the product
+description. `unauthorised_access` matches 8 records and is reported descriptively
+only, like the elderly stratum.

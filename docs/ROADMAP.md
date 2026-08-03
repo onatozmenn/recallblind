@@ -31,14 +31,17 @@ Annotation tooling is built; the labelling itself is the remaining work.
 
 **Done when:** extractor $F_1 \geq 0.85$ on held-out gold data. — *CS + CONS*
 
-## Milestone 3 — Hazard taxonomy
+## Milestone 3 — Hazard taxonomy `IN PROGRESS`
 
-`Hazards[].HazardType` is empty in the source, so the label set is ours.
+`Hazards[].HazardType` is empty in the source, so the label set is ours. Eleven
+mechanism categories drafted from the prose of 1,081 recalls, covering 97.7%.
 
-- [ ] Draft categories from CPSC hazard prose
-- [ ] Double-annotate 100 items per category, report Cohen's $\kappa$
+- [x] Draft categories from CPSC hazard prose, with measured frequencies
+- [x] Separate mechanism from outcome, so categories do not collapse into "injury"
+- [x] Publish taxonomy with definitions and boundary examples
+- [x] Annotation tooling with per-category $\kappa$
+- [ ] Double-annotate the 200-record sample
 - [ ] Rewrite any definition scoring below 0.70 rather than forcing agreement
-- [ ] Publish taxonomy with definitions and boundary examples
 
 **Done when:** $\kappa \geq 0.70$ on every category. — *CONS lead*
 

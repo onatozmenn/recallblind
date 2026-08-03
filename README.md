@@ -54,7 +54,7 @@ python -m recallblind.cli extract                                  # recover mod
 python -m recallblind.cli negatives                                # build verified hard negatives
 python -m recallblind.cli tasks                                    # assemble T1-T4
 python -m recallblind.cli eval lookup_baseline                     # score an adapter
-python -m unittest discover -s tests                               # 45 tests, no network
+python -m unittest discover -s tests                               # 63 tests, no network
 ```
 
 Raw responses are cached under `data/raw/`, normalized records land in

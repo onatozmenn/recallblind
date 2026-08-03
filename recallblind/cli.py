@@ -8,7 +8,7 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 
-from . import adapters, gold, ingest_cpsc, ingest_oecd, negatives, tasks
+from . import adapters, campaign, gold, hazards, ingest_cpsc, ingest_oecd, negatives, tasks
 from .evaluate import score, write_report
 from .extract_identifiers import build as build_identifiers
 from .index import build_index
@@ -125,6 +125,54 @@ def cmd_extractor_score(args: argparse.Namespace) -> None:
     print(json.dumps(gold.score_extractor(paths), indent=2))
 
 
+def cmd_hazards(_: argparse.Namespace) -> None:
+    path = NORMALIZED / "cpsc.jsonl"
+    if not path.exists():
+        raise SystemExit("run `cpsc` first")
+    report = hazards.coverage(read_jsonl(path))
+    (DERIVED / "hazard_coverage.json").parent.mkdir(parents=True, exist_ok=True)
+    (DERIVED / "hazard_coverage.json").write_text(
+        json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+
+
+def _campaign(name: str) -> campaign.Campaign:
+    if name not in campaign.CAMPAIGNS:
+        raise SystemExit(f"unknown campaign: {name}")
+    return campaign.CAMPAIGNS[name]
+
+
+def cmd_campaign_sample(args: argparse.Namespace) -> None:
+    spec = _campaign(args.campaign)
+    if spec.name == "hazards":
+        source = NORMALIZED / "cpsc.jsonl"
+        if not source.exists():
+            raise SystemExit("run `cpsc` first")
+        rows = campaign.sample_hazards(list(read_jsonl(source)), args.size, args.seed)
+    else:
+        source = DERIVED / "negatives.jsonl"
+        if not source.exists():
+            raise SystemExit("run `negatives` first")
+        rows = campaign.sample_negatives(campaign.load(source), args.size, args.seed)
+    print(json.dumps(campaign.write_sample(rows, BENCH / f"{spec.name}_sample.jsonl"), indent=2))
+
+
+def cmd_campaign_label(args: argparse.Namespace) -> None:
+    spec = _campaign(args.campaign)
+    sample = BENCH / f"{spec.name}_sample.jsonl"
+    if not sample.exists():
+        raise SystemExit(f"run `campaign-sample {spec.name}` first")
+    campaign.annotate(
+        spec, sample, GOLD / f"{spec.name}-{args.annotator}.jsonl", args.annotator, args.limit
+    )
+
+
+def cmd_campaign_agreement(args: argparse.Namespace) -> None:
+    spec = _campaign(args.campaign)
+    print(json.dumps(campaign.agreement(spec, Path(args.first), Path(args.second)), indent=2))
+
+
 def cmd_stats(_: argparse.Namespace) -> None:
     for name in ("cpsc", "oecd"):
         path = NORMALIZED / f"{name}.jsonl"
@@ -202,6 +250,29 @@ def main() -> None:
     extractor = sub.add_parser("extractor-score", help="precision/recall/F1 against the gold set")
     extractor.add_argument("annotations", nargs="+")
     extractor.set_defaults(func=cmd_extractor_score)
+
+    sub.add_parser("hazards", help="coverage of the draft hazard taxonomy").set_defaults(
+        func=cmd_hazards
+    )
+
+    names = sorted(campaign.CAMPAIGNS)
+    csample = sub.add_parser("campaign-sample", help="draw an annotation sample")
+    csample.add_argument("campaign", choices=names)
+    csample.add_argument("--size", type=int, default=200)
+    csample.add_argument("--seed", type=int, default=20260804)
+    csample.set_defaults(func=cmd_campaign_sample)
+
+    clabel = sub.add_parser("campaign-label", help="label a sample by hand")
+    clabel.add_argument("campaign", choices=names)
+    clabel.add_argument("annotator")
+    clabel.add_argument("--limit", type=int, default=None)
+    clabel.set_defaults(func=cmd_campaign_label)
+
+    cagree = sub.add_parser("campaign-agreement", help="Cohen's kappa for a campaign")
+    cagree.add_argument("campaign", choices=names)
+    cagree.add_argument("first")
+    cagree.add_argument("second")
+    cagree.set_defaults(func=cmd_campaign_agreement)
 
     args = parser.parse_args()
     args.func(args)
