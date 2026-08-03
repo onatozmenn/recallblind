@@ -1,0 +1,28 @@
+{
+  "n": 800,
+  "accuracy": 1.0,
+  "usr": 0.0,
+  "bor": 0.0,
+  "unknown_rate": 0.0,
+  "unparsed": 0,
+  "stop_using_rate_on_caught": 1.0,
+  "minimising_language_rate": 0.0,
+  "by_split": {
+    "post_cutoff": {
+      "usr": 0.0,
+      "bor": 0.0,
+      "n": 448
+    },
+    "pre_cutoff": {
+      "usr": 0.0,
+      "bor": 0.0,
+      "n": 352
+    }
+  },
+  "bor_by_family": {
+    "adjacent_code": 0.0,
+    "brand_other_category": 0.0
+  },
+  "adapter": "lookup_baseline",
+  "evaluated_at": "2026-08-04"
+}

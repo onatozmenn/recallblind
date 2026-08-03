@@ -46,15 +46,54 @@ notice covers the notified product only, not everything a brand sells.
 Python 3.11+, no third-party dependencies.
 
 ```bash
-python -m recallblind.cli cpsc --start-year 2024 --end-year 2026
-python -m recallblind.cli oecd --limit 500
-python -m recallblind.cli extract
-python -m recallblind.cli stats
+python -m recallblind.cli cpsc --start-year 2024 --end-year 2026   # ingest authority data
+python -m recallblind.cli extract                                  # recover model/SKU codes
+python -m recallblind.cli negatives                                # build verified hard negatives
+python -m recallblind.cli tasks                                    # assemble the benchmark
+python -m recallblind.cli eval lookup_baseline                     # score an adapter
 ```
 
 Raw responses are cached under `data/raw/`, normalized records land in
-`data/normalized/*.jsonl`, derived identifiers in `data/derived/`.
-None of it is committed: the pipeline re-fetches from public APIs.
+`data/normalized/*.jsonl`, derived artefacts in `data/derived/`, the benchmark in
+`data/benchmark/`, scores in `results/`. None of it is committed: the pipeline
+re-fetches from public APIs.
+
+### Evaluating your own model
+
+Write a module exposing `answer(prompt: str) -> str`, then:
+
+```bash
+python -m recallblind.cli eval path/to/my_adapter.py
+```
+
+## Harness validation
+
+Deterministic adapters pin the metric extremes. If these numbers ever change,
+scoring is broken — not the model.
+
+| Adapter | Accuracy | USR | BOR |
+|---|---:|---:|---:|
+| `always_recalled` | 0.50 | 0.00 | **1.00** |
+| `always_safe` | 0.50 | **1.00** | 0.00 |
+| `always_unknown` | 0.00 | 1.00 | 0.00 |
+| `lookup_baseline` | **1.00** | 0.00 | 0.00 |
+
+`lookup_baseline` does an exact identifier match against the authority index. Its
+perfect score is a dataset-validity check, not a result: every positive is
+findable and every negative is genuinely absent from the recall data. The open
+question is whether AI assistants perform this lookup at all.
+
+## Benchmark composition
+
+800 balanced items from 1,081 CPSC recalls, 1,437 verified negatives available:
+
+| Family | Items | Meaning |
+|---|---:|---|
+| `authority_recall` | 400 | Genuine recalls with an extracted identifier |
+| `brand_other_category` | 244 | Brand that was recalled, in a category it was not |
+| `adjacent_code` | 156 | One digit off a recalled code, absent from all recalls |
+
+Temporal split against a 2025-06-01 cutoff: 448 post-cutoff, 352 pre-cutoff.
 
 ## Findings so far
 

@@ -38,25 +38,32 @@ Baseline regex extractor exists at 52.4% coverage on 1,081 CPSC recalls.
 
 **Done when:** $\kappa \geq 0.70$ on every category. — *CONS lead*
 
-## Milestone 4 — Hard negatives
+## Milestone 4 — Hard negatives `IN PROGRESS`
 
-The benchmark stands or falls here.
+The benchmark stands or falls here. Generator implemented; 1,437 candidates
+verified against the recall index.
 
-- [ ] Sibling models, adjacent series, corrected successors
-- [ ] Verify each negative appears in no recall, at generation time
-- [ ] Difficulty tiers by string and semantic distance from the positive
+- [x] Adjacent series: one digit changed, verified absent from all recalls (543)
+- [x] Brand-other-category: brand recalled elsewhere, no recall in this category (894)
+- [ ] Corrected successor family
+- [ ] Difficulty tiers by semantic distance, not only string distance
 - [ ] Manual review of a sample; a wrong negative is worse than a missing one
 
 **Done when:** ≥ 500 verified negatives across three families. — *CS + CONS*
 
-## Milestone 5 — Task construction
+## Milestone 5 — Task construction `IN PROGRESS`
 
-- [ ] T1 status, T2 variant discrimination, T3 correct action, T4 notice quality
-- [ ] Fixed prompt templates, published verbatim
-- [ ] Temporal splits: pre-cutoff, post-cutoff, fresh
-- [ ] Stratified sampling across the strata in the design doc
+T1 and T2 build and score end to end against deterministic adapters.
 
-**Done when:** task files validate and a mock adapter scores end to end. — *CS*
+- [x] Fixed prompt template, published in `recallblind/tasks.py`
+- [x] Temporal splits: pre-cutoff and post-cutoff
+- [x] Balanced 800-item task file with stratum tags
+- [x] Scoring harness validated by adapters that pin USR and BOR extremes
+- [ ] T3 correct-action scoring beyond the stop-using check
+- [ ] T4 notice-quality task
+- [ ] `fresh` split generated at release time
+
+**Done when:** all four tasks validate and a mock adapter scores. — *CS*
 
 ## Milestone 6 — Scoring rubric
 
