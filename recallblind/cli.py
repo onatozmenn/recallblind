@@ -173,6 +173,15 @@ def cmd_campaign_agreement(args: argparse.Namespace) -> None:
     print(json.dumps(campaign.agreement(spec, Path(args.first), Path(args.second)), indent=2))
 
 
+def cmd_campaign_report(args: argparse.Namespace) -> None:
+    spec = _campaign(args.campaign)
+    paths = [Path(path) for path in args.annotations] or sorted(GOLD.glob(f"{spec.name}-*.jsonl"))
+    if not paths:
+        raise SystemExit(f"no annotations found in {GOLD}")
+    report = campaign.summarise(spec, paths, BENCH / f"{spec.name}_sample.jsonl")
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+
+
 def cmd_stats(_: argparse.Namespace) -> None:
     for name in ("cpsc", "oecd"):
         path = NORMALIZED / f"{name}.jsonl"
@@ -273,6 +282,11 @@ def main() -> None:
     cagree.add_argument("first")
     cagree.add_argument("second")
     cagree.set_defaults(func=cmd_campaign_agreement)
+
+    creport = sub.add_parser("campaign-report", help="label distribution, and rates per family")
+    creport.add_argument("campaign", choices=names)
+    creport.add_argument("annotations", nargs="*", help="defaults to every file in data/gold")
+    creport.set_defaults(func=cmd_campaign_report)
 
     args = parser.parse_args()
     args.func(args)

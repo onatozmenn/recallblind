@@ -220,12 +220,52 @@ def agreement(campaign: Campaign, first: Path, second: Path) -> dict[str, Any]:
     }
 
 
-def summarise(campaign: Campaign, paths: list[Path]) -> dict[str, Any]:
+def summarise(
+    campaign: Campaign, paths: list[Path], sample_path: Path | None = None
+) -> dict[str, Any]:
+    """Label counts, and per-family rates when the sample carries a family."""
     counts: dict[str, int] = {choice: 0 for choice in campaign.choices}
     total = 0
+    labels_by_id: dict[str, list[str]] = {}
     for path in paths:
         for row in load(path):
             total += 1
+            labels_by_id[row["id"]] = row["labels"]
             for label in row["labels"]:
                 counts[label] = counts.get(label, 0) + 1
-    return {"annotations": total, "by_label": counts}
+
+    report: dict[str, Any] = {"annotations": total, "by_label": counts}
+    if total:
+        report["rate_by_label"] = {
+            label: round(count / total, 4) for label, count in counts.items()
+        }
+
+    if sample_path and sample_path.exists():
+        strata: dict[str, dict[str, int]] = {}
+        for item in load(sample_path):
+            family = item.get("family")
+            if not family or item["id"] not in labels_by_id:
+                continue
+            bucket = strata.setdefault(family, {choice: 0 for choice in campaign.choices})
+            for label in labels_by_id[item["id"]]:
+                bucket[label] = bucket.get(label, 0) + 1
+        if strata:
+            report["by_family"] = {
+                family: {
+                    "n": sum(bucket.values()),
+                    "rates": {
+                        label: round(count / sum(bucket.values()), 4)
+                        for label, count in bucket.items()
+                    }
+                    if sum(bucket.values())
+                    else {},
+                }
+                for family, bucket in sorted(strata.items())
+            }
+            # Issue #8: a family above 20% implausible gets its generator constrained.
+            report["families_over_20pc_implausible"] = sorted(
+                family
+                for family, value in report["by_family"].items()
+                if value["rates"].get("implausible", 0) > 0.20
+            )
+    return report

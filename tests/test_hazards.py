@@ -166,6 +166,30 @@ class Campaigns(unittest.TestCase):
         b.write_text("", encoding="utf-8")
         self.assertIn("error", campaign.agreement(spec, a, b))
 
+    def test_report_breaks_rates_down_by_family(self):
+        spec = campaign.CAMPAIGNS["negatives"]
+        sample = self.tmp / "sample.jsonl"
+        campaign.write_sample(
+            [
+                {"id": "x0", "text": "t", "family": "adjacent_code"},
+                {"id": "x1", "text": "t", "family": "adjacent_code"},
+                {"id": "x2", "text": "t", "family": "brand_other_category"},
+            ],
+            sample,
+        )
+        labels = self._write_labels("a", [["implausible"], ["implausible"], ["valid"]])
+        report = campaign.summarise(spec, [labels], sample)
+        self.assertEqual(report["by_family"]["adjacent_code"]["rates"]["implausible"], 1.0)
+        self.assertEqual(report["families_over_20pc_implausible"], ["adjacent_code"])
+
+    def test_report_works_without_a_sample(self):
+        spec = campaign.CAMPAIGNS["negatives"]
+        labels = self._write_labels("a", [["valid"], ["wrong"]])
+        report = campaign.summarise(spec, [labels])
+        self.assertEqual(report["annotations"], 2)
+        self.assertEqual(report["rate_by_label"]["valid"], 0.5)
+        self.assertNotIn("by_family", report)
+
 
 if __name__ == "__main__":
     unittest.main()
