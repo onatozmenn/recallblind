@@ -1,0 +1,125 @@
+# Decision log
+
+Short architecture decision records. Reopening a decision requires a new entry,
+not an edit to an old one.
+
+---
+
+## ADR-001 — Scope is recall-blindness, not general shopping-AI auditing
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+Broader framings (commercial bias, dark patterns, personalised pricing) are
+already occupied. Measured on GitHub the same day: `"dark patterns"` 738 repos,
+`ecommerce price tracker` 1,422, `"fake review detection"` 1,752. Product-safety
+auditing of AI shopping assistants returned no direct hits.
+
+Prior art we do **not** duplicate:
+
+- [RECALL-MM](https://arxiv.org/abs/2503.23213) — CPSC dataset for engineering
+  designers; strips brand names, so it cannot answer "is this product recalled?"
+- [ACES](https://arxiv.org/abs/2508.02630) — position, sponsorship and price bias
+  in agentic commerce.
+- [ShoppingMMLU](https://github.com/KL4805/ShoppingMMLU) — shopping skill.
+- [Bias Beware](https://github.com/geofila/Bias-Beware) — cognitive-bias attacks
+  on recommenders.
+
+**Consequence:** every task must trace back to physical consumer safety.
+
+---
+
+## ADR-002 — Türkiye is out of scope
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+Türkiye publishes unsafe-product notices only through GÜBİS, which offers no
+public API. It is absent from the OECD Global Recalls economy list, verified by
+querying the facet endpoint. The only route to structured Turkish data would be a
+ministry relationship, which the team has ruled out.
+
+**Consequence:** no Turkish data source, and no Turkish legal axis. The rubric is
+based on EU GPSR alone. Non-English evaluation, if revisited, needs its own ADR.
+
+---
+
+## ADR-003 — CPSC is primary, OECD is secondary
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+CPSC gives depth: hazard prose, remedy text, images, retailers, and the free text
+that carries model numbers. OECD gives breadth: 56,608 records across 50
+economies plus a product taxonomy, but its dates are unreliable — `orderby=date-desc`
+does not return recent records and placeholder `1900-01-01` values are common.
+
+**Consequence:** temporal splits come from CPSC only. OECD supports coverage
+claims and taxonomy, never recency.
+
+---
+
+## ADR-004 — Core pipeline uses the standard library only
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+Ingestion and extraction must run on a clean Python 3.11 install with no
+packaging step, so a collaborator can reproduce numbers immediately.
+
+**Consequence:** model adapters and analysis may add dependencies, but they stay
+outside the core modules.
+
+---
+
+## ADR-005 — Distribute identifiers and annotations, not bulk source data
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+CPSC output is US public domain, but OECD responses carry `© OECD. All rights
+reserved`. Shipping fetch scripts plus our annotations respects both, and keeps
+the benchmark current instead of frozen.
+
+**Consequence:** `data/` is git-ignored; reproduction requires running the CLI.
+
+---
+
+## ADR-006 — Ship a regex extraction baseline before any LLM extractor
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+`Products[].Model` is empty in 100% of records, so identifiers must come from
+prose. A transparent baseline reaching 52.4% coverage sets the bar any learned
+extractor must clear on the same human-labelled sample.
+
+An early precision bug is instructive: `40V` and `20-in` were captured as model
+numbers. A unit filter removed 37 spurious tokens while coverage moved only
+52.5% → 52.4%.
+
+**Consequence:** no extractor replaces the baseline without a measured $F_1$ on
+the gold set.
+
+---
+
+## ADR-007 — Notice-quality scoring derives from EU GPSR Articles 36–37
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+Rather than invent a "good warning" rubric, we operationalise the elements that
+[Regulation (EU) 2023/988](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32023R0988)
+requires of a recall notice, in force since 13 December 2024: clear hazard
+description, no risk-minimising language, an explicit instruction to stop using
+the product, and available remedies. Recital 87 reports that about one third of
+consumers keep using dangerous products after seeing a notice.
+
+**Consequence:** T4 scores are defensible against an external standard rather
+than team preference.
+
+---
+
+## ADR-008 — USR and BOR are co-primary metrics
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+Under-warning endangers consumers; over-flagging damages sellers and mirrors a
+real failure seen on marketplaces, where safe variants are blocked because a
+sibling model was recalled. Authorities are explicit that a notice covers only the
+notified product.
+
+**Consequence:** no headline result may report one metric without the other.
