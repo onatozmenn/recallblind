@@ -10,7 +10,7 @@ from datetime import date
 from pathlib import Path
 
 from . import adapters, campaign, gold, hazards, ingest_cpsc, ingest_oecd, negatives, tasks
-from .evaluate import score, select_items, write_report
+from .evaluate import apply_cutoff, score, select_items, write_report
 from .extract_identifiers import build as build_identifiers
 from .index import build_index
 from .remedies import MINIMISING_RE
@@ -22,6 +22,7 @@ NORMALIZED = DATA / "normalized"
 DERIVED = DATA / "derived"
 BENCH = DATA / "benchmark"
 GOLD = DATA / "gold"
+IDENTIFIERS = DERIVED / "identifiers.jsonl"
 RESULTS = Path("results")
 
 
@@ -29,7 +30,21 @@ def _load_index():
     path = NORMALIZED / "cpsc.jsonl"
     if not path.exists():
         raise SystemExit("run `cpsc` first")
-    return build_index(read_jsonl(path), DERIVED / "identifiers.jsonl")
+    return build_index(read_jsonl(path), IDENTIFIERS)
+
+
+def _check_benchmark_is_current() -> None:
+    report = BENCH / "tasks_report.json"
+    if not report.exists():
+        return
+    recorded = json.loads(report.read_text(encoding="utf-8")).get("identifiers_fingerprint")
+    current = tasks.fingerprint(IDENTIFIERS)
+    if recorded and recorded != current:
+        raise SystemExit(
+            f"benchmark is stale: built from identifiers {recorded}, now {current}.\n"
+            "Re-run `negatives` and `tasks`, otherwise prompts name codes the index "
+            "no longer holds and every metric shifts silently."
+        )
 
 
 def cmd_cpsc(args: argparse.Namespace) -> None:
@@ -46,7 +61,7 @@ def cmd_extract(_: argparse.Namespace) -> None:
     path = NORMALIZED / "cpsc.jsonl"
     if not path.exists():
         raise SystemExit("run `cpsc` first")
-    report = build_identifiers(read_jsonl(path), DERIVED / "identifiers.jsonl")
+    report = build_identifiers(read_jsonl(path), IDENTIFIERS)
     (DERIVED / "identifier_report.json").write_text(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -72,6 +87,7 @@ def cmd_tasks(args: argparse.Namespace) -> None:
         limit_notice=args.limit_notice,
         fresh_after=args.fresh_after,
     )
+    report["identifiers_fingerprint"] = tasks.fingerprint(IDENTIFIERS)
     (BENCH / "tasks_report.json").write_text(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -82,11 +98,14 @@ def cmd_eval(args: argparse.Namespace) -> None:
     path = BENCH / "tasks.jsonl"
     if not path.exists():
         raise SystemExit("run `tasks` first")
+    _check_benchmark_is_current()
     items = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
     items = select_items(items, args.task, args.limit)
     if not items:
         raise SystemExit("no items selected")
+    if args.cutoff:
+        items = apply_cutoff(items, args.cutoff)
 
     module = None
     if args.adapter == "lookup_baseline":
@@ -96,9 +115,8 @@ def cmd_eval(args: argparse.Namespace) -> None:
     else:
         answer, module = adapters.load_custom(Path(args.adapter), with_module=True)
 
-    # Progress goes to stderr so stdout stays parseable JSON.
     print(f"scoring {len(items)} items with {args.adapter}", file=sys.stderr, flush=True)
-    report = score(items, answer)
+    report = score(items, answer, workers=args.workers)
     report["adapter"] = Path(args.adapter).stem
     report["evaluated_at"] = date.today().isoformat()
     if module is not None and hasattr(module, "usage"):
@@ -253,6 +271,12 @@ def main() -> None:
     ev.add_argument("adapter", help="builtin name, 'lookup_baseline', or path to a .py adapter")
     ev.add_argument("--limit", type=int, default=None, help="pilot run: cap items, spread across tasks")
     ev.add_argument("--task", nargs="+", default=None, help="restrict to given tasks, e.g. T1 T2")
+    ev.add_argument(
+        "--cutoff",
+        default=None,
+        help="this model's training cutoff; re-splits pre/post at scoring time",
+    )
+    ev.add_argument("--workers", type=int, default=1, help="parallel requests; raise for API adapters")
     ev.set_defaults(func=cmd_eval)
 
     sub.add_parser("stats", help="summarise normalized data").set_defaults(func=cmd_stats)

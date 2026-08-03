@@ -17,6 +17,7 @@ import json
 import re
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -170,6 +171,23 @@ def _verdict_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def apply_cutoff(items: list[dict[str, Any]], cutoff: str) -> list[dict[str, Any]]:
+    """Recompute the temporal split for one model's training cutoff.
+
+    The benchmark bakes in a default date, but a split is only meaningful
+    relative to the model being tested: everything after 2024 is post-cutoff for
+    an older model, and the pre-cutoff bucket would otherwise be empty while
+    still being reported as if it meant something.
+    """
+    out = []
+    for item in items:
+        copy = dict(item)
+        recall_date = copy.get("recall_date") or ""
+        copy["split"] = "post_cutoff" if recall_date > cutoff else "pre_cutoff"
+        out.append(copy)
+    return out
+
+
 def select_items(
     items: list[dict[str, Any]], tasks: Iterable[str] | None = None, limit: int | None = None
 ) -> list[dict[str, Any]]:
@@ -194,12 +212,27 @@ def select_items(
     return [item for task in sorted(by_task) for item in by_task[task][:share]]
 
 
-def score(items: Iterable[dict[str, Any]], answer: Callable[[str], str]) -> dict[str, Any]:
+def _ask(answer: Callable[[str], str], prompt: str) -> tuple[str, float]:
+    started = time.perf_counter()
+    return answer(prompt), time.perf_counter() - started
+
+
+def score(
+    items: Iterable[dict[str, Any]],
+    answer: Callable[[str], str],
+    workers: int = 1,
+) -> dict[str, Any]:
+    items = list(items)
+
+    if workers > 1:
+        # Order matters for reproducibility, so results are gathered by index.
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            replies = list(pool.map(lambda item: _ask(answer, item["prompt"]), items))
+    else:
+        replies = [_ask(answer, item["prompt"]) for item in items]
+
     rows: list[dict[str, Any]] = []
-    for item in items:
-        started = time.perf_counter()
-        response = answer(item["prompt"])
-        elapsed = time.perf_counter() - started
+    for item, (response, elapsed) in zip(items, replies):
         task = item.get("task", "T1")
         row: dict[str, Any] = {
             "item_id": item["item_id"],

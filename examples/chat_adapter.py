@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -43,8 +45,10 @@ SYSTEM = (
     "or can verify. If you cannot verify a recall status, say UNKNOWN."
 )
 
-# Temperature 0 where supported, per the evaluation protocol.
+# Temperature 0 where supported, per the evaluation protocol. Reasoning models
+# reject the parameter outright, so it is dropped on the first refusal.
 TEMPERATURE = 0.0
+SUPPORTS_TEMPERATURE = True
 TIMEOUT = 60
 RETRIES = 4
 
@@ -64,35 +68,53 @@ def _post(payload: dict) -> dict:
 
 
 # Populated as the run proceeds so the harness can report real token cost.
+# The harness may call answer() from several threads, hence the lock.
 USAGE = {"input_tokens": 0, "output_tokens": 0, "calls": 0}
+_USAGE_LOCK = threading.Lock()
 
 
 def usage() -> dict:
-    return dict(USAGE)
+    with _USAGE_LOCK:
+        return dict(USAGE)
 
 
 def answer(prompt: str) -> str:
-    payload = {
-        "model": MODEL,
-        "temperature": TEMPERATURE,
-        "messages": [
-            {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": prompt},
-        ],
-    }
+    global SUPPORTS_TEMPERATURE
+
+    def build() -> dict:
+        payload = {
+            "model": MODEL,
+            "messages": [
+                {"role": "system", "content": SYSTEM},
+                {"role": "user", "content": prompt},
+            ],
+        }
+        if SUPPORTS_TEMPERATURE:
+            payload["temperature"] = TEMPERATURE
+        return payload
 
     for attempt in range(RETRIES):
         try:
-            body = _post(payload)
+            body = _post(build())
             counted = body.get("usage") or {}
-            USAGE["input_tokens"] += counted.get("prompt_tokens", 0)
-            USAGE["output_tokens"] += counted.get("completion_tokens", 0)
-            USAGE["calls"] += 1
+            with _USAGE_LOCK:
+                USAGE["input_tokens"] += counted.get("prompt_tokens", 0)
+                USAGE["output_tokens"] += counted.get("completion_tokens", 0)
+                USAGE["calls"] += 1
             return body["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as error:
+            detail = ""
+            try:
+                detail = error.read().decode("utf-8", "replace")
+            except Exception:
+                pass
+            if error.code == 400 and SUPPORTS_TEMPERATURE and "temperature" in detail:
+                SUPPORTS_TEMPERATURE = False
+                print(f"{MODEL} rejects temperature; continuing without it", file=sys.stderr)
+                continue
             # Rate limits and 5xx are worth retrying; a bad request is not.
             if error.code not in (429, 500, 502, 503, 504) or attempt == RETRIES - 1:
-                raise
+                raise SystemExit(f"HTTP {error.code} from {MODEL}: {detail[:400]}")
             time.sleep(2**attempt)
         except urllib.error.URLError:
             if attempt == RETRIES - 1:

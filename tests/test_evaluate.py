@@ -11,6 +11,7 @@ import unittest
 from recallblind import adapters
 from recallblind.evaluate import (
     NOTICE_TOTAL_WEIGHT,
+    apply_cutoff,
     parse_verdict,
     score,
     score_action,
@@ -204,6 +205,32 @@ class PilotSelection(unittest.TestCase):
         self.assertEqual(select_items(self.items, tasks=["T9"]), [])
 
 
+class PerModelCutoff(unittest.TestCase):
+    def setUp(self):
+        self.items = [
+            make_item("T1", item_id="old", recall_date="2024-03-01", split="pre_cutoff"),
+            make_item("T1", item_id="new", recall_date="2026-02-01", split="post_cutoff"),
+        ]
+
+    def test_recomputes_the_split(self):
+        # An older model has seen neither recall, so both are post-cutoff for it.
+        moved = apply_cutoff(self.items, "2023-10-01")
+        self.assertEqual({row["split"] for row in moved}, {"post_cutoff"})
+
+    def test_splits_where_the_cutoff_falls(self):
+        moved = apply_cutoff(self.items, "2025-06-01")
+        self.assertEqual(moved[0]["split"], "pre_cutoff")
+        self.assertEqual(moved[1]["split"], "post_cutoff")
+
+    def test_does_not_mutate_the_benchmark_rows(self):
+        apply_cutoff(self.items, "2023-10-01")
+        self.assertEqual(self.items[0]["split"], "pre_cutoff")
+
+    def test_missing_date_is_treated_as_pre_cutoff(self):
+        moved = apply_cutoff([make_item("T1", recall_date="")], "2025-06-01")
+        self.assertEqual(moved[0]["split"], "pre_cutoff")
+
+
 class HarnessPins(unittest.TestCase):
     """The numbers the deterministic adapters must produce."""
 
@@ -255,6 +282,24 @@ class HarnessPins(unittest.TestCase):
         report = score(self.items, adapters.always_safe)
         self.assertEqual(report["n_by_task"], {"T1": 1, "T2": 1, "T3": 1, "T4": 1})
         self.assertEqual(report["accuracy"], 0.5)
+
+    def test_parallel_scoring_matches_sequential(self):
+        # Responses are gathered by index; a race would shuffle them onto the
+        # wrong items and silently change every metric.
+        counter = {"n": 0}
+
+        def numbered(prompt: str) -> str:
+            counter["n"] += 1
+            return "RECALLED\nStop using it and contact the seller for a refund."
+
+        sequential = score(self.items, numbered, workers=1)
+        parallel = score(self.items, numbered, workers=4)
+        for key in ("accuracy", "usr", "bor"):
+            self.assertEqual(sequential[key], parallel[key])
+        self.assertEqual(
+            [row["item_id"] for row in sequential["rows"]],
+            [row["item_id"] for row in parallel["rows"]],
+        )
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ it tells the household to do, which isolates advice quality from lookup ability.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 import re
@@ -15,6 +16,17 @@ from pathlib import Path
 
 from .index import RecallIndex, brand_of, category_of
 from .remedies import hazard_terms, substantive
+
+
+def fingerprint(path: Path) -> str:
+    """Identity of the file a benchmark was built from.
+
+    Rebuilding identifiers without rebuilding the tasks leaves prompts pointing at
+    codes the index no longer holds, and every metric shifts for no visible reason.
+    """
+    if not path.exists():
+        return "missing"
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
 
 STRATA: dict[str, str] = {
     "children": r"child|baby|toddler|infant|nursery|crib|stroller|bassinet",
