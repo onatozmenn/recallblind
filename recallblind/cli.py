@@ -119,13 +119,18 @@ def cmd_eval(args: argparse.Namespace) -> None:
     report = score(items, answer, workers=args.workers)
     report["adapter"] = Path(args.adapter).stem
     report["evaluated_at"] = date.today().isoformat()
+    report["training_cutoff"] = args.cutoff
+    report["workers"] = args.workers
+    report["task_filter"] = [task.upper() for task in args.task] if args.task else None
     if module is not None and hasattr(module, "usage"):
         report["usage"] = module.usage()
     if module is not None and hasattr(module, "MODEL"):
         report["model"] = module.MODEL
 
+    result_name = str(report.get("model") or Path(args.adapter).stem)
+    result_name = "".join(char if char.isalnum() or char in "-_" else "-" for char in result_name)
     summary = {key: value for key, value in report.items() if key != "rows"}
-    write_report(report, RESULTS, Path(args.adapter).stem)
+    write_report(report, RESULTS, result_name)
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
 
