@@ -49,14 +49,16 @@ Python 3.11+, no third-party dependencies.
 python -m recallblind.cli cpsc --start-year 2024 --end-year 2026   # ingest authority data
 python -m recallblind.cli extract                                  # recover model/SKU codes
 python -m recallblind.cli negatives                                # build verified hard negatives
-python -m recallblind.cli tasks                                    # assemble the benchmark
+python -m recallblind.cli tasks                                    # assemble T1-T4
 python -m recallblind.cli eval lookup_baseline                     # score an adapter
+python -m unittest discover -s tests                               # 45 tests, no network
 ```
 
 Raw responses are cached under `data/raw/`, normalized records land in
 `data/normalized/*.jsonl`, derived artefacts in `data/derived/`, the benchmark in
 `data/benchmark/`, scores in `results/`. None of it is committed: the pipeline
-re-fetches from public APIs.
+re-fetches from public APIs. The one exception is `data/gold/`, which holds human
+annotations that cannot be regenerated.
 
 ### Evaluating your own model
 
@@ -68,32 +70,47 @@ python -m recallblind.cli eval path/to/my_adapter.py
 
 ## Harness validation
 
-Deterministic adapters pin the metric extremes. If these numbers ever change,
-scoring is broken — not the model.
+Each task has one safety-critical headline metric, and deterministic adapters pin
+every one of them at a known value. If these numbers move, scoring is broken
+rather than the model.
 
-| Adapter | Accuracy | USR | BOR |
-|---|---:|---:|---:|
-| `always_recalled` | 0.50 | 0.00 | **1.00** |
-| `always_safe` | 0.50 | **1.00** | 0.00 |
-| `always_unknown` | 0.00 | 1.00 | 0.00 |
-| `lookup_baseline` | **1.00** | 0.00 | 0.00 |
+| Adapter | Accuracy | USR (T1) | BOR (T2) | Unsafe action (T3) | NCS (T4) |
+|---|---:|---:|---:|---:|---:|
+| `always_recalled` | 0.50 | 0.00 | **1.00** | 0.00 | 0.75 |
+| `always_safe` | 0.50 | **1.00** | 0.00 | **1.00** | 0.25 |
+| `always_unknown` | 0.00 | 1.00 | 0.00 | 1.00 | 0.25 |
+| `minimising_notice` | 0.50 | 1.00 | 0.00 | 1.00 | **0.00** |
+| `compliant_notice` | 0.50 | 0.00 | 1.00 | 0.00 | **1.00** |
+| `lookup_baseline` | **1.00** | 0.00 | 0.00 | 0.00 | 1.00 |
 
-`lookup_baseline` does an exact identifier match against the authority index. Its
-perfect score is a dataset-validity check, not a result: every positive is
-findable and every negative is genuinely absent from the recall data. The open
-question is whether AI assistants perform this lookup at all.
+The blind adapters hit both extremes at once: whatever catches every recall also
+flags every safe product. Only `lookup_baseline` reads the identifier, which is
+why it alone scores 0.00 on both USR and BOR. Its perfect accuracy is a
+dataset-validity check, not a result: every positive is findable by exact
+identifier match and every negative is genuinely absent from the recall data. The
+open question is whether AI assistants perform this lookup at all.
 
 ## Benchmark composition
 
-800 balanced items from 1,081 CPSC recalls, 1,437 verified negatives available:
+1,400 items from 1,081 CPSC recalls, with 1,981 verified negatives available:
 
-| Family | Items | Meaning |
+| Task | Items | Measures |
 |---|---:|---|
-| `authority_recall` | 400 | Genuine recalls with an extracted identifier |
-| `brand_other_category` | 244 | Brand that was recalled, in a category it was not |
-| `adjacent_code` | 156 | One digit off a recalled code, absent from all recalls |
+| T1 recall status | 400 | Does it know? |
+| T2 variant discrimination | 400 | Does it over-generalise? |
+| T3 correct action | 300 | Told it is recalled, is the advice right? |
+| T4 notice quality | 300 | Does the warning meet GPSR Article 36? |
 
-Temporal split against a 2025-06-01 cutoff: 448 post-cutoff, 352 pre-cutoff.
+Negative families, each verified absent from the recall index before emission:
+
+| Family | Available | Construction |
+|---|---:|---|
+| `brand_other_category` | 894 | Brand recalled elsewhere, no recall in this category |
+| `corrected_successor` | 544 | Revision suffix, as reissued after a fix |
+| `adjacent_code` | 543 | One digit off a recalled code |
+
+Temporal splits run against a 2025-06-01 cutoff, with a `fresh` split for recalls
+issued after benchmark release.
 
 ## Findings so far
 

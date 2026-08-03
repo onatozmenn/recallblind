@@ -15,6 +15,9 @@ from pathlib import Path
 
 from .index import CATEGORIES, RecallIndex, brand_of, category_of, normalize_code
 
+# How manufacturers mark a corrected reissue.
+SUFFIXES: tuple[str, ...] = ("A", "B", "-R2", "-V2", " REV B", "-02", "X")
+
 
 @dataclass
 class Negative:
@@ -77,6 +80,49 @@ def adjacent_codes(index: RecallIndex, per_recall: int = 1) -> list[Negative]:
     return out
 
 
+def corrected_successor(index: RecallIndex, per_recall: int = 1) -> list[Negative]:
+    """A later revision of a recalled product, back on the market.
+
+    Manufacturers routinely fix a defect and reissue under a revision suffix. The
+    parent recall does not extend to the corrected unit, so a model that answers
+    on brand and family resemblance rather than on the notified identifier fails
+    here. This is the most realistic of the three families.
+    """
+    out: list[Negative] = []
+    for key, values in index.identifiers.items():
+        record = index.by_key[key]
+        brand = brand_of(record)
+        category = category_of(record)
+        if not brand or not values:
+            continue
+
+        rng = random.Random(f"successor:{key}")
+        made = 0
+        for value in values:
+            if made >= per_recall or len(value) < 4:
+                continue
+            candidate = f"{value}{rng.choice(SUFFIXES)}"
+            if index.is_recalled_code(candidate):
+                continue
+            out.append(
+                Negative(
+                    negative_id=f"succ-{key.replace(':', '-')}-{made}",
+                    family="corrected_successor",
+                    brand=brand,
+                    category=category or "product",
+                    identifier=candidate,
+                    source_key=key,
+                    difficulty="hard",
+                    rationale=(
+                        f"Revision of recalled model {value}; the recall names the "
+                        f"original only and this revision is absent from the index."
+                    ),
+                )
+            )
+            made += 1
+    return out
+
+
 def brand_other_category(index: RecallIndex, per_brand: int = 2) -> list[Negative]:
     """Same brand, a category in which that brand has no recall on record."""
     out: list[Negative] = []
@@ -109,14 +155,27 @@ def brand_other_category(index: RecallIndex, per_brand: int = 2) -> list[Negativ
 
 
 def build(index: RecallIndex, out_path: Path, per_brand: int = 1) -> dict[str, object]:
-    negatives = adjacent_codes(index) + brand_other_category(index, per_brand=per_brand)
+    negatives = (
+        adjacent_codes(index)
+        + corrected_successor(index)
+        + brand_other_category(index, per_brand=per_brand)
+    )
+
+    # Nothing leaves this function without a final check against the index: a
+    # negative that is actually recalled would silently invert the benchmark.
+    verified = [
+        negative
+        for negative in negatives
+        if not (negative.identifier and index.is_recalled_code(negative.identifier))
+    ]
+    rejected = len(negatives) - len(verified)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as handle:
-        for negative in negatives:
+        for negative in verified:
             handle.write(json.dumps(asdict(negative), ensure_ascii=False) + "\n")
 
     counts: dict[str, int] = {}
-    for negative in negatives:
+    for negative in verified:
         counts[negative.family] = counts.get(negative.family, 0) + 1
-    return {"total": len(negatives), "by_family": counts}
+    return {"total": len(verified), "rejected_at_verification": rejected, "by_family": counts}

@@ -1,5 +1,6 @@
 # Generated data is re-fetchable from public APIs; never commit it.
 data/*
+results/
 *.jsonl
 
 __pycache__/

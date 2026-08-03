@@ -123,3 +123,57 @@ sibling model was recalled. Authorities are explicit that a notice covers only t
 notified product.
 
 **Consequence:** no headline result may report one metric without the other.
+
+
+---
+
+## ADR-009 — Unsafe action means the absence of a stop-using instruction
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+T3's headline was first defined as "no stop-using instruction OR wording that
+invites continued use". The oracle adapter then failed on real items, because
+authorities do scope a recall to one function: SharkNinja's notice tells consumers
+to stop using the pressure-cooking function while continuing to use the rest.
+Quoting the authority was being scored as unsafe advice.
+
+`unsafe_action` is therefore the absence of a stop-using instruction alone.
+Continuation wording is still recorded as `unsafe_continuation_rate` and reported
+as a diagnostic.
+
+**Consequence:** the headline is high precision and cannot be triggered by a
+faithful quotation. Contradictory advice that both stops and permits use is not
+detected by rules and is left to the T4 human validation sample.
+
+---
+
+## ADR-010 — T4 is scored only on facts the prompt showed
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+Hazard and remedy text is truncated before it enters a prompt. Scoring against the
+full authority record marked responses non-compliant for omitting text they were
+never given, which cost the ceiling adapter 26% of the remedy element.
+
+Gold hazards are derived from the truncated string that actually appears in the
+prompt, and the remedy excerpt is the sentence naming the remedy rather than the
+first N characters. An item whose remedy cannot be shown is dropped from T4.
+
+**Consequence:** NCS = 1.0 is reachable, so the metric has a real ceiling. T3
+still withholds the remedy on purpose, since knowing it is the thing being tested.
+
+---
+
+## ADR-011 — Negative identifiers are synthetic, and this bounds the claim
+
+**Date:** 2026-08-04 · **Status:** accepted
+
+`adjacent_code` and `corrected_successor` build identifiers that are absent from
+every recall record but are not known to exist as products. A model answering
+NOT_RECALLED for a string that names nothing is right for a weaker reason than one
+that discriminates two real catalogue entries. No public dataset of non-recalled
+consumer products exists to do better.
+
+**Consequence:** BOR measures over-generalisation from brand and code resemblance,
+which is the marketplace failure we care about. It does not measure real catalogue
+discrimination, and results must not be described as if it did.

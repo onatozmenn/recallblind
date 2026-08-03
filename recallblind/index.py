@@ -66,12 +66,17 @@ class RecallIndex:
     by_key: dict[str, Recall] = field(default_factory=dict)
     identifiers: dict[str, list[str]] = field(default_factory=lambda: defaultdict(list))
     codes: set[str] = field(default_factory=set)
+    code_owner: dict[str, str] = field(default_factory=dict)
     brand_categories: set[tuple[str, str]] = field(default_factory=set)
     brands: dict[str, list[str]] = field(default_factory=lambda: defaultdict(list))
 
     def is_recalled_code(self, value: str) -> bool:
         normalized = normalize_code(value)
         return bool(normalized) and normalized in self.codes
+
+    def recall_for_code(self, value: str) -> Recall | None:
+        key = self.code_owner.get(normalize_code(value))
+        return self.by_key.get(key) if key else None
 
     def brand_has_category(self, brand: str, category: str) -> bool:
         return (brand.lower(), category.lower()) in self.brand_categories
@@ -104,5 +109,6 @@ def build_index(records: Iterable[Recall], identifiers_path: Path) -> RecallInde
             normalized = normalize_code(value)
             if normalized:
                 index.codes.add(normalized)
+                index.code_owner.setdefault(normalized, record.key)
 
     return index

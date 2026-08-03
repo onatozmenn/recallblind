@@ -12,6 +12,7 @@ from . import adapters, gold, ingest_cpsc, ingest_oecd, negatives, tasks
 from .evaluate import score, write_report
 from .extract_identifiers import build as build_identifiers
 from .index import build_index
+from .remedies import MINIMISING_RE
 from .schema import read_jsonl, write_jsonl
 
 DATA = Path("data")
@@ -66,6 +67,9 @@ def cmd_tasks(args: argparse.Namespace) -> None:
         BENCH / "tasks.jsonl",
         cutoff=args.cutoff,
         limit_per_label=args.limit,
+        limit_action=args.limit_action,
+        limit_notice=args.limit_notice,
+        fresh_after=args.fresh_after,
     )
     (BENCH / "tasks_report.json").write_text(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -131,9 +135,17 @@ def cmd_stats(_: argparse.Namespace) -> None:
         stop_using = sum(
             1 for record in records if any("stop using" in remedy.lower() for remedy in record.remedies)
         )
+        # Measured at 0.2% of CPSC records, so minimising wording in a model
+        # response is almost always introduced by the model, not quoted.
+        minimising = sum(
+            1
+            for record in records
+            if MINIMISING_RE.search(" ".join([*record.remedies, record.description, record.title]))
+        )
         print(f"\n[{name}] {len(records)} records")
         print(f"  years: {dict(sorted(years.items()))}")
         print(f"  with image: {sum(1 for r in records if r.images)} | says 'stop using': {stop_using}")
+        print(f"  contains GPSR-banned minimising wording: {minimising} ({minimising / len(records):.1%})")
 
 
 def main() -> None:
@@ -157,7 +169,14 @@ def main() -> None:
 
     task = sub.add_parser("tasks", help="build benchmark task file")
     task.add_argument("--cutoff", default="2025-06-01", help="training cutoff for the temporal split")
-    task.add_argument("--limit", type=int, default=400, help="max items per label")
+    task.add_argument("--limit", type=int, default=400, help="max T1/T2 items per label")
+    task.add_argument("--limit-action", type=int, default=300, help="max T3 items")
+    task.add_argument("--limit-notice", type=int, default=300, help="max T4 items")
+    task.add_argument(
+        "--fresh-after",
+        default=None,
+        help="recalls issued after this date form the contamination-resistant 'fresh' split",
+    )
     task.set_defaults(func=cmd_tasks)
 
     ev = sub.add_parser("eval", help="score an adapter")

@@ -42,30 +42,29 @@ Annotation tooling is built; the labelling itself is the remaining work.
 
 **Done when:** $\kappa \geq 0.70$ on every category. — *CONS lead*
 
-## Milestone 4 — Hard negatives `IN PROGRESS`
+## Milestone 4 — Hard negatives `DONE`
 
-The benchmark stands or falls here. Generator implemented; 1,437 candidates
-verified against the recall index.
+The benchmark stands or falls here. 1,981 candidates, each verified against the
+recall index before emission.
 
 - [x] Adjacent series: one digit changed, verified absent from all recalls (543)
-- [x] Brand-other-category: brand recalled elsewhere, no recall in this category (894)
-- [ ] Corrected successor family
-- [ ] Difficulty tiers by semantic distance, not only string distance
+- [x] Corrected successor: revision suffix, as reissued after a fix (544)
+- [x] Brand-other-category: brand recalled elsewhere, none in this category (894)
+- [x] Difficulty tiers recorded per family
 - [ ] Manual review of a sample; a wrong negative is worse than a missing one
 
 **Done when:** ≥ 500 verified negatives across three families. — *CS + CONS*
 
-## Milestone 5 — Task construction `IN PROGRESS`
+## Milestone 5 — Task construction `DONE`
 
-T1 and T2 build and score end to end against deterministic adapters.
+All four tasks build and score, with 45 tests pinning the harness.
 
-- [x] Fixed prompt template, published in `recallblind/tasks.py`
-- [x] Temporal splits: pre-cutoff and post-cutoff
-- [x] Balanced 800-item task file with stratum tags
-- [x] Scoring harness validated by adapters that pin USR and BOR extremes
-- [ ] T3 correct-action scoring beyond the stop-using check
-- [ ] T4 notice-quality task
-- [ ] `fresh` split generated at release time
+- [x] Fixed prompt templates, published in `recallblind/tasks.py`
+- [x] Temporal splits: pre-cutoff, post-cutoff and fresh
+- [x] T1 status and T2 variant discrimination, balanced 400 + 400
+- [x] T3 correct action, scored on the authority's own remedy
+- [x] T4 notice quality, scored on the weighted GPSR Article 36 elements
+- [x] Deterministic adapters pin every headline metric at both extremes
 
 **Done when:** all four tasks validate and a mock adapter scores. — *CS*
 
