@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reclume — AI product recall benchmark</title>
+  <meta name="description" content="Reclume measures whether AI assistants identify recalled products, distinguish safe variants, and give correct consumer safety advice.">
+  <meta name="theme-color" content="#171815">
+  <meta property="og:title" content="Reclume — AI product recall benchmark">
+  <meta property="og:description" content="Can an AI spot the recall before a household misses it?">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="assets/reclume.ico" sizes="any">
+  <link rel="icon" href="assets/reclume-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Reclume home">
+      <img src="assets/reclume-mark.svg" width="34" height="34" alt="">
+      <span>reclume</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#benchmark">Benchmark</a>
+      <a href="#method">Method</a>
+      <a class="github-link" href="https://github.com/onatozmenn/reclume">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="kicker"><span class="signal-dot"></span> Preliminary benchmark · August 2026</div>
+        <h1 id="hero-title">Can an AI spot the recall before a household misses it?</h1>
+        <p class="hero-deck">Reclume tests whether AI assistants identify officially recalled products, avoid alarming owners of safe variants, and give the right next step.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#benchmark">See the results</a>
+          <a class="button text" href="#method">Read the method <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+      <div class="hero-mark" aria-hidden="true">
+        <img src="assets/reclume-mark.svg" alt="">
+        <span class="mark-caption">A recall signal,<br>made visible.</span>
+      </div>
+      <dl class="stat-strip" aria-label="Benchmark composition">
+        <div><dt>1,400</dt><dd>prompts</dd></div>
+        <div><dt>1,081</dt><dd>CPSC recalls</dd></div>
+        <div><dt>2</dt><dd>models tested</dd></div>
+        <div><dt>4</dt><dd>safety tasks</dd></div>
+      </dl>
+    </section>
+
+    <section class="benchmark section" id="benchmark" aria-labelledby="benchmark-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Model results</p>
+          <h2 id="benchmark-title">The benchmark at a glance</h2>
+        </div>
+        <p class="section-note">Lower is safer for T1–T3. Higher is better for T4.</p>
+      </div>
+
+      <div class="metric-switcher" aria-label="Select benchmark task">
+        <button type="button" class="metric-tab active" data-metric="usr" aria-pressed="true"><span>T1</span> Recall silence</button>
+        <button type="button" class="metric-tab" data-metric="bor" aria-pressed="false"><span>T2</span> Overreach</button>
+        <button type="button" class="metric-tab" data-metric="repair" aria-pressed="false"><span>T3</span> Remedy error</button>
+        <button type="button" class="metric-tab" data-metric="ncs" aria-pressed="false"><span>T4</span> Notice quality</button>
+      </div>
+
+      <div class="metric-panel">
+        <div class="metric-copy">
+          <p class="metric-direction" id="metric-direction">Lower is safer</p>
+          <h3 id="metric-title">Unsafe silence rate</h3>
+          <p id="metric-description">A recalled product was not identified as recalled. UNKNOWN counts as silence: caution is calibrated, but the household still receives no warning.</p>
+        </div>
+        <div class="bar-chart" id="bar-chart" aria-live="polite"></div>
+      </div>
+
+      <div class="table-wrap" tabindex="0" aria-label="Benchmark leaderboard, horizontally scrollable">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Model</th>
+              <th scope="col">T1 silence <span>↓</span></th>
+              <th scope="col">T2 overreach <span>↓</span></th>
+              <th scope="col">T3 wrong repair <span>↓</span></th>
+              <th scope="col">T4 NCS <span>↑</span></th>
+              <th scope="col">Status behavior</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+      </div>
+      <p class="table-caveat"><strong>Read T1 and T2 together.</strong> GPT-4o mini’s zero overreach is not discrimination: it answered UNKNOWN on all 800 status prompts.</p>
+    </section>
+
+    <section class="finding" aria-labelledby="finding-title">
+      <div class="finding-label">Central finding · GPT-5.6 Luna</div>
+      <div class="finding-grid">
+        <div>
+          <p class="finding-number">26.7%</p>
+          <h2 id="finding-title">Knowledge travels too far.</h2>
+        </div>
+        <p>Luna flags more real recalls than GPT-4o mini, but it also declares more than one in four <em>corrected successor</em> identifiers recalled. Better recall memory spills onto a revised model the notice does not cover.</p>
+      </div>
+      <div class="family-bars" aria-label="Luna overreach rate by hard-negative family">
+        <div><span>Brand, other category</span><i style="--value:4.4%"></i><strong>4.4%</strong></div>
+        <div><span>Adjacent code</span><i style="--value:15.3%"></i><strong>15.3%</strong></div>
+        <div><span>Corrected successor</span><i style="--value:26.7%"></i><strong>26.7%</strong></div>
+      </div>
+    </section>
+
+    <section class="section method" id="method" aria-labelledby="method-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Four tasks, one safety question</p>
+          <h2 id="method-title">What Reclume measures</h2>
+        </div>
+        <a class="inline-link" href="https://github.com/onatozmenn/reclume/blob/main/docs/BENCHMARK-DESIGN.md">Full protocol ↗</a>
+      </div>
+      <div class="task-grid">
+        <article><span>01</span><h3>Recall status</h3><p>Does the model identify an officially recalled product by brand and exact identifier?</p><strong>400 recalled products</strong></article>
+        <article><span>02</span><h3>Variant discrimination</h3><p>Can it avoid extending a recall to an adjacent code, another category, or a corrected successor?</p><strong>400 verified negatives</strong></article>
+        <article><span>03</span><h3>Correct action</h3><p>When told the item is recalled, does it stop use and name only the remedy the authority offered?</p><strong>300 authority notices</strong></article>
+        <article><span>04</span><h3>Notice quality</h3><p>Does its warning contain the product, hazard, stop-use instruction, remedy, and information route?</p><strong>300 GPSR-scored notices</strong></article>
+      </div>
+    </section>
+
+    <section class="data-band" aria-labelledby="data-title">
+      <div>
+        <p class="eyebrow">The data problem</p>
+        <h2 id="data-title">The model field is empty.</h2>
+      </div>
+      <div class="data-copy">
+        <p>CPSC’s structured <code>Products[].Model</code> field is populated in <strong>0%</strong> of the measured records. Reclume recovers model, SKU, lot, style, serial, and item identifiers from recall prose before building the benchmark.</p>
+        <dl>
+          <div><dt>53.3%</dt><dd>identifier coverage</dd></div>
+          <div><dt>97.7%</dt><dd>hazard taxonomy coverage</dd></div>
+          <div><dt>2,008</dt><dd>verified negative candidates</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="section limits" aria-labelledby="limits-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Read before citing</p>
+          <h2 id="limits-title">Preliminary, by design</h2>
+        </div>
+      </div>
+      <div class="limit-list">
+        <div><span>01</span><p><strong>Identifier precision has an AI first pass, not a human gold set.</strong> Recall is still unmeasured.</p></div>
+        <div><span>02</span><p><strong>Code-based negatives are synthetic.</strong> They are absent from every recall record, but may not be real catalogue products.</p></div>
+        <div><span>03</span><p><strong>Rule scoring needs human validation.</strong> Model runs are research previews, not final leaderboard claims.</p></div>
+      </div>
+      <div class="source-row">
+        <p>Authority backbone: <a href="https://www.cpsc.gov/Recalls">US Consumer Product Safety Commission</a></p>
+        <p>Code and protocol: <a href="https://github.com/onatozmenn/reclume">GitHub repository</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-brand"><img src="assets/reclume-mark-inverse.svg" width="44" height="44" alt=""><span>reclume</span></div>
+    <p>A research instrument for product-safety auditing.<br>Not a recall service or legal advice.</p>
+    <p>MIT code · CC BY 4.0 documentation</p>
+  </footer>
+</body>
+</html>
