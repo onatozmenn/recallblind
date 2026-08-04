@@ -49,6 +49,7 @@ SYSTEM = (
 # reject the parameter outright, so it is dropped on the first refusal.
 TEMPERATURE = 0.0
 SUPPORTS_TEMPERATURE = True
+_TEMPERATURE_WARNING_SHOWN = False
 TIMEOUT = 60
 RETRIES = 4
 
@@ -79,7 +80,7 @@ def usage() -> dict:
 
 
 def answer(prompt: str) -> str:
-    global SUPPORTS_TEMPERATURE
+    global SUPPORTS_TEMPERATURE, _TEMPERATURE_WARNING_SHOWN
 
     def build() -> dict:
         payload = {
@@ -108,9 +109,15 @@ def answer(prompt: str) -> str:
                 detail = error.read().decode("utf-8", "replace")
             except Exception:
                 pass
-            if error.code == 400 and SUPPORTS_TEMPERATURE and "temperature" in detail:
-                SUPPORTS_TEMPERATURE = False
-                print(f"{MODEL} rejects temperature; continuing without it", file=sys.stderr)
+            if error.code == 400 and "temperature" in detail:
+                with _USAGE_LOCK:
+                    SUPPORTS_TEMPERATURE = False
+                    if not _TEMPERATURE_WARNING_SHOWN:
+                        print(
+                            f"{MODEL} rejects temperature; continuing without it",
+                            file=sys.stderr,
+                        )
+                        _TEMPERATURE_WARNING_SHOWN = True
                 continue
             # Rate limits and 5xx are worth retrying; a bad request is not.
             if error.code not in (429, 500, 502, 503, 504) or attempt == RETRIES - 1:

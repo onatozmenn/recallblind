@@ -20,6 +20,7 @@ from recallblind.evaluate import (
 )
 from recallblind.remedies import (
     MINIMISING_RE,
+    STOP_USING_RE,
     UNSAFE_CONTINUATION_RE,
     classify,
     hazard_terms,
@@ -90,6 +91,26 @@ class RemedyVocabulary(unittest.TestCase):
         # The same words with a negator mean the opposite and must not fire.
         self.assertFalse(UNSAFE_CONTINUATION_RE.search("Do not continue using it."))
         self.assertFalse(UNSAFE_CONTINUATION_RE.search("Never keep using it."))
+
+    def test_product_specific_stop_instructions(self):
+        phrases = (
+            "Stop wearing the sweater immediately.",
+            "Stop riding and charging the bicycle.",
+            "Stop children from using the tunnel.",
+            "Stop allowing children to ride the bicycle immediately.",
+            "Stop relying on the affected fire alarm.",
+            "Do not use the curling iron.",
+            "Don't allow children to use the product.",
+            "Keep the bicycle out of use.",
+        )
+        for phrase in phrases:
+            with self.subTest(phrase=phrase):
+                self.assertTrue(STOP_USING_RE.search(phrase))
+
+    def test_action_without_a_stop_instruction_does_not_match(self):
+        for phrase in ("Contact the manufacturer.", "Remove the drawstrings.", "Keep away from children."):
+            with self.subTest(phrase=phrase):
+                self.assertFalse(STOP_USING_RE.search(phrase))
 
 
 class ActionScoring(unittest.TestCase):
@@ -300,6 +321,11 @@ class HarnessPins(unittest.TestCase):
             [row["item_id"] for row in sequential["rows"]],
             [row["item_id"] for row in parallel["rows"]],
         )
+
+    def test_full_response_is_kept_for_future_rescoring(self):
+        long_response = "RECALLED\n" + "x" * 1200 + " stop using it"
+        report = score([self.items[0]], lambda _: long_response)
+        self.assertEqual(report["rows"][0]["response"], long_response)
 
 
 if __name__ == "__main__":

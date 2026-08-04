@@ -127,7 +127,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
     if module is not None and hasattr(module, "MODEL"):
         report["model"] = module.MODEL
 
-    result_name = str(report.get("model") or Path(args.adapter).stem)
+    result_name = str(args.name or report.get("model") or Path(args.adapter).stem)
     result_name = "".join(char if char.isalnum() or char in "-_" else "-" for char in result_name)
     summary = {key: value for key, value in report.items() if key != "rows"}
     write_report(report, RESULTS, result_name)
@@ -282,6 +282,7 @@ def main() -> None:
         help="this model's training cutoff; re-splits pre/post at scoring time",
     )
     ev.add_argument("--workers", type=int, default=1, help="parallel requests; raise for API adapters")
+    ev.add_argument("--name", default=None, help="result filename; useful for partial reruns")
     ev.set_defaults(func=cmd_eval)
 
     sub.add_parser("stats", help="summarise normalized data").set_defaults(func=cmd_stats)

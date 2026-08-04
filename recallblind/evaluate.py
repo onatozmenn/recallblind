@@ -243,7 +243,7 @@ def score(
             "strata": item["strata"],
             "minimising_language": bool(MINIMISING_RE.search(response)),
             "latency_s": round(elapsed, 3),
-            "response": response[:800],
+            "response": response,
         }
 
         if task in ("T1", "T2"):

@@ -37,7 +37,16 @@ HAZARD_VOCAB: tuple[str, ...] = (
 
 _HAZARD_RES = tuple((term, re.compile(f"(?i){term}")) for term in HAZARD_VOCAB)
 
-STOP_USING_RE = REMEDY_PATTERNS["stop_using"]
+STOP_USING_RE = re.compile(
+    r"(?ix)"
+    r"\b(?:stop|cease|discontinue)\s+(?:\w+\s+){0,3}?"
+    r"(?:using|use|wearing|riding|operating|charging|carrying|consuming|relying)\b"
+    r"|\b(?:do\s+not|don't|never)\s+"
+    r"(?:use|wear|ride|operate|charge|carry|consume|rely)\b"
+    r"|\b(?:stop|do\s+not|don't)\s+allow(?:ing)?\s+(?:\w+\s+){0,3}?to\s+"
+    r"(?:use|wear|ride|operate|charge|carry|consume)\b"
+    r"|\bkeep\s+(?:\w+\s+){0,3}?out\s+of\s+use\b"
+)
 CONTACT_RE = REMEDY_PATTERNS["contact"]
 
 # Wording EU GPSR Article 36(2)(c) says a recall notice must not contain.
