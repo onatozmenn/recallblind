@@ -11,10 +11,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from recallblind import negatives, tasks
-from recallblind.gold import cohens_kappa, score_extractor
-from recallblind.index import RecallIndex, brand_of, build_index, category_of, normalize_code
-from recallblind.schema import Recall, write_jsonl
+from reclume import negatives, tasks
+from reclume.gold import cohens_kappa, score_extractor
+from reclume.index import RecallIndex, brand_of, build_index, category_of, normalize_code
+from reclume.schema import Recall, write_jsonl
 
 
 def make_recall(source_id: str, title: str, **overrides) -> Recall:

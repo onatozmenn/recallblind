@@ -31,18 +31,22 @@ flowchart LR
     J --> K[scoring + leaderboard]
 ```
 
-Implemented today: A through G. Planned: H onward.
+All stages A through K are implemented. Human validation gates remain before a
+public dataset release; see the roadmap.
 
 ## Modules
 
 | Module | Responsibility |
 |---|---|
-| `recallblind/schema.py` | `Recall` dataclass, HTML/whitespace cleaning, JSONL IO |
-| `recallblind/http.py` | Retry with exponential backoff, on-disk response cache |
-| `recallblind/ingest_cpsc.py` | CPSC fetch per year, defensive field flattening |
-| `recallblind/ingest_oecd.py` | OECD paginated search, taxonomy tags |
-| `recallblind/extract_identifiers.py` | Anchor-and-window identifier extraction |
-| `recallblind/cli.py` | `cpsc`, `oecd`, `extract`, `stats` subcommands |
+| `reclume/schema.py` | `Recall` dataclass, HTML/whitespace cleaning, JSONL IO |
+| `reclume/http.py` | Retry with exponential backoff, on-disk response cache |
+| `reclume/ingest_cpsc.py` | CPSC fetch per year, defensive field flattening |
+| `reclume/ingest_oecd.py` | OECD paginated search, taxonomy tags |
+| `reclume/extract_identifiers.py` | Anchor-and-window identifier extraction |
+| `reclume/negatives.py` | Three verified hard-negative families |
+| `reclume/tasks.py` | T1–T4 construction and temporal splits |
+| `reclume/evaluate.py` | USR, BOR, action and GPSR notice scoring |
+| `reclume/cli.py` | End-to-end ingestion, construction and evaluation CLI |
 
 ## Unified schema
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import unittest
 
-from recallblind.extract_identifiers import extract
+from reclume.extract_identifiers import extract
 
 
 def values(text: str) -> set[str]:

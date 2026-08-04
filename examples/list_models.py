@@ -4,7 +4,7 @@
     python examples/list_models.py mini      # filter by substring
 
 Reads the key exactly like the adapter does: `secrets/openai.key`, or the
-RECALLBLIND_API_KEY environment variable. The key is never printed.
+RECLUME_API_KEY environment variable. The key is never printed.
 """
 
 from __future__ import annotations
@@ -15,12 +15,12 @@ import sys
 import urllib.request
 from pathlib import Path
 
-BASE = os.environ.get("RECALLBLIND_API_BASE", "https://api.openai.com/v1")
-KEY_FILE = Path(os.environ.get("RECALLBLIND_KEY_FILE", "secrets/openai.key"))
+BASE = os.environ.get("RECLUME_API_BASE", "https://api.openai.com/v1")
+KEY_FILE = Path(os.environ.get("RECLUME_KEY_FILE", "secrets/openai.key"))
 
 
 def api_key() -> str:
-    key = os.environ.get("RECALLBLIND_API_KEY", "").strip()
+    key = os.environ.get("RECLUME_API_KEY", "").strip()
     if key:
         return key
     if KEY_FILE.exists():

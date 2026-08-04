@@ -242,7 +242,7 @@ def cmd_stats(_: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="recallblind")
+    parser = argparse.ArgumentParser(prog="reclume")
     sub = parser.add_subparsers(dest="command", required=True)
 
     cpsc = sub.add_parser("cpsc", help="ingest US CPSC recalls")

@@ -9,7 +9,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-USER_AGENT = "RecallBlind/0.1 (academic research; contact via repository)"
+USER_AGENT = "Reclume/0.1 (academic research; contact via repository)"
 
 
 def get_json(

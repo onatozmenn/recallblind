@@ -4,7 +4,7 @@ Put your key in `secrets/openai.key` **using the editor**, not by typing it into
 a terminal: shell history is stored, replayed and often shared. That path is
 gitignored. Then:
 
-    python -m recallblind.cli eval examples/chat_adapter.py --limit 50
+    python -m reclume.cli eval examples/chat_adapter.py --limit 50
 
 An adapter is any module exposing `answer(prompt: str) -> str`. Nothing else is
 required, and nothing here is imported by the package itself.
@@ -24,20 +24,20 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-API_URL = os.environ.get("RECALLBLIND_API_URL", "https://api.openai.com/v1/chat/completions")
-MODEL = os.environ.get("RECALLBLIND_MODEL", "gpt-4o-mini")
-KEY_FILE = Path(os.environ.get("RECALLBLIND_KEY_FILE", "secrets/openai.key"))
+API_URL = os.environ.get("RECLUME_API_URL", "https://api.openai.com/v1/chat/completions")
+MODEL = os.environ.get("RECLUME_MODEL", "gpt-4o-mini")
+KEY_FILE = Path(os.environ.get("RECLUME_KEY_FILE", "secrets/openai.key"))
 
 
 def _api_key() -> str:
     """Environment first, then the gitignored file. Never logged either way."""
-    key = os.environ.get("RECALLBLIND_API_KEY", "").strip()
+    key = os.environ.get("RECLUME_API_KEY", "").strip()
     if key:
         return key
     if KEY_FILE.exists():
         return KEY_FILE.read_text(encoding="utf-8").strip()
     raise SystemExit(
-        f"no API key: put it in {KEY_FILE} with your editor, or set RECALLBLIND_API_KEY"
+        f"no API key: put it in {KEY_FILE} with your editor, or set RECLUME_API_KEY"
     )
 
 SYSTEM = (

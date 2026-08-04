@@ -62,7 +62,7 @@ recall index before emission.
 
 All four tasks build and score, with 45 tests pinning the harness.
 
-- [x] Fixed prompt templates, published in `recallblind/tasks.py`
+- [x] Fixed prompt templates, published in `reclume/tasks.py`
 - [x] Temporal splits: pre-cutoff, post-cutoff and fresh
 - [x] T1 status and T2 variant discrimination, balanced 400 + 400
 - [x] T3 correct action, scored on the authority's own remedy

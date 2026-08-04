@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import unittest
 
-from recallblind import adapters
-from recallblind.evaluate import (
+from reclume import adapters
+from reclume.evaluate import (
     NOTICE_TOTAL_WEIGHT,
     apply_cutoff,
     parse_verdict,
@@ -18,7 +18,7 @@ from recallblind.evaluate import (
     score_notice,
     select_items,
 )
-from recallblind.remedies import (
+from reclume.remedies import (
     MINIMISING_RE,
     STOP_USING_RE,
     UNSAFE_CONTINUATION_RE,

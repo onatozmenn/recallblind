@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 72" role="img" aria-labelledby="title desc">
+  <title id="title">Reclume</title>
+  <desc id="desc">Reclume wordmark with a fragmented geometric R mark.</desc>
+  <rect x="4" y="4" width="64" height="64" rx="8" fill="#F7F4EC"/>
+  <path d="M17 14h10v44H17zM27 14h23v10H27zM27 32h18v10H27z" fill="#171815"/>
+  <path d="M33 42l19 18" fill="none" stroke="#F2C94C" stroke-width="9" stroke-linecap="square"/>
+  <rect x="46" y="31" width="13" height="13" fill="#E84D3D"/>
+  <text x="88" y="51" fill="#171815" font-family="Manrope, Avenir Next, sans-serif" font-size="42" font-weight="750" letter-spacing="0">reclume</text>
+</svg>

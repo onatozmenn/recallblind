@@ -7,8 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from recallblind import campaign, hazards
-from recallblind.schema import Recall
+from reclume import campaign, hazards
+from reclume.schema import Recall
 
 
 def make_recall(source_id: str, hazard: str, title: str = "Acme recalls a thing") -> Recall:

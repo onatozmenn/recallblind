@@ -1,16 +1,20 @@
-# RecallBlind
+<p align="left">
+	<img src="brand/reclume-logo.svg" width="300" alt="Reclume">
+</p>
 
-[![tests](https://github.com/onatozmenn/recallblind/actions/workflows/tests.yml/badge.svg)](https://github.com/onatozmenn/recallblind/actions/workflows/tests.yml)
+[![tests](https://github.com/onatozmenn/reclume/actions/workflows/tests.yml/badge.svg)](https://github.com/onatozmenn/reclume/actions/workflows/tests.yml)
+[![pages](https://github.com/onatozmenn/reclume/actions/workflows/pages.yml/badge.svg)](https://onatozmenn.github.io/reclume/)
 
 **Do AI shopping assistants know which products have been recalled?**
 
-RecallBlind is an open benchmark that measures whether large language models and
+Reclume is an open benchmark that measures whether large language models and
 AI shopping agents recommend, or fail to warn about, consumer products that have
 been officially recalled for safety reasons.
 
-> **Status:** early development. All four tasks build and score against a
-> validated harness; no model has been evaluated yet, and the human-annotated
-> gold set is still outstanding. See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status:** two preliminary model runs are published on the
+> [benchmark site](https://onatozmenn.github.io/reclume/). The harness is
+> validated; human validation of identifiers, negatives and rule scoring is
+> still outstanding. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
@@ -44,17 +48,30 @@ Full definitions, metrics and formulas: [docs/BENCHMARK-DESIGN.md](docs/BENCHMAR
 **T2 is the hard part.** Over-flagging is as harmful as under-flagging: a recall
 notice covers the notified product only, not everything a brand sells.
 
+## Preliminary results
+
+| Model | T1 unsafe silence ↓ | T2 overreach ↓ | T3 wrong repair ↓ | T4 notice quality ↑ |
+|---|---:|---:|---:|---:|
+| GPT-4o mini (2024-07-18) | 100.0% | 0.0% | 35.7% | 96.3% |
+| GPT-5.6 Luna | 80.3% | 13.8% | 39.7% | 95.1% |
+
+GPT-4o mini answered `UNKNOWN` on all 800 status prompts, so its zero overreach
+does not demonstrate discrimination. Luna identified 79 of 400 recalled products
+but falsely flagged 55 of 400 negatives; its overreach reached **26.7%** on
+corrected-successor identifiers. Read the interactive comparison and caveats on
+the [Reclume benchmark site](https://onatozmenn.github.io/reclume/).
+
 ## Quickstart
 
 Python 3.11+, no third-party dependencies.
 
 ```bash
-python -m recallblind.cli cpsc --start-year 2024 --end-year 2026   # ingest authority data
-python -m recallblind.cli extract                                  # recover model/SKU codes
-python -m recallblind.cli negatives                                # build verified hard negatives
-python -m recallblind.cli tasks                                    # assemble T1-T4
-python -m recallblind.cli eval lookup_baseline                     # score an adapter
-python -m unittest discover -s tests                               # 63 tests, no network
+python -m reclume.cli cpsc --start-year 2024 --end-year 2026   # ingest authority data
+python -m reclume.cli extract                                  # recover model/SKU codes
+python -m reclume.cli negatives                                # build verified hard negatives
+python -m reclume.cli tasks                                    # assemble T1-T4
+python -m reclume.cli eval lookup_baseline                     # score an adapter
+python -m unittest discover -s tests                           # 94 tests, no network
 ```
 
 Raw responses are cached under `data/raw/`, normalized records land in
@@ -68,8 +85,8 @@ annotations that cannot be regenerated.
 Write a module exposing `answer(prompt: str) -> str`, then:
 
 ```bash
-python -m recallblind.cli eval path/to/my_adapter.py --limit 40   # pilot first
-python -m recallblind.cli eval path/to/my_adapter.py              # full run
+python -m reclume.cli eval path/to/my_adapter.py --limit 40   # pilot first
+python -m reclume.cli eval path/to/my_adapter.py              # full run
 ```
 
 `examples/chat_adapter.py` is a working OpenAI-compatible adapter. Put the key in
@@ -104,7 +121,7 @@ open question is whether AI assistants perform this lookup at all.
 
 ## Benchmark composition
 
-1,400 items from 1,081 CPSC recalls, with 1,981 verified negatives available:
+1,400 items from 1,081 CPSC recalls, with 2,008 verified negatives available:
 
 | Task | Items | Measures |
 |---|---:|---|
@@ -118,8 +135,8 @@ Negative families, each verified absent from the recall index before emission:
 | Family | Available | Construction |
 |---|---:|---|
 | `brand_other_category` | 894 | Brand recalled elsewhere, no recall in this category |
-| `corrected_successor` | 544 | Revision suffix, as reissued after a fix |
-| `adjacent_code` | 543 | One digit off a recalled code |
+| `corrected_successor` | 557 | Revision suffix, as reissued after a fix |
+| `adjacent_code` | 557 | One digit off a recalled code |
 
 Temporal splits run against a 2025-06-01 cutoff, with a `fresh` split for recalls
 issued after benchmark release.
@@ -139,7 +156,7 @@ Measured 2026-08-04 on CPSC recalls from 2023-01-01 to 2026-08-04 (1,405 records
 | **`Hazards[].HazardType`** | **0%** |
 
 The structured model-number field is entirely empty, so identifiers must be
-recovered from prose. Our regex baseline reaches **52.4% coverage** (566 of 1,081
+recovered from prose. Our regex baseline reaches **53.3% coverage** (576 of 1,081
 recalls yield at least one identifier). Beating this is the first modelling task.
 
 Details and caveats: [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md).
@@ -147,9 +164,11 @@ Details and caveats: [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md).
 ## Layout
 
 ```
-recallblind/     ingestion, schema, identifier extraction, CLI
-docs/            architecture, benchmark design, data sources, roadmap, decisions
-data/            generated locally, git-ignored
+reclume/   ingestion, schema, task construction and scoring
+site/      static benchmark website deployed with GitHub Pages
+brand/     SVG wordmark, marks and multi-size ICO favicon
+docs/      architecture, benchmark design, data sources and decisions
+data/      generated locally, git-ignored except human annotations
 ```
 
 ## Licence and attribution
@@ -163,6 +182,6 @@ data. OECD content is subject to the
 
 ## Disclaimer
 
-RecallBlind is a research instrument, not a consumer safety service and not legal
+Reclume is a research instrument, not a consumer safety service and not legal
 advice. Recall status can change at any time. Always verify against the issuing
 authority before acting.

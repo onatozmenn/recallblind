@@ -106,10 +106,10 @@ standard benchmark practice and keeps the dataset current rather than frozen.
 ## Reproducing
 
 ```bash
-python -m recallblind.cli cpsc --start-year 2023 --end-year 2026
-python -m recallblind.cli oecd --limit 2000
-python -m recallblind.cli extract
-python -m recallblind.cli stats
+python -m reclume.cli cpsc --start-year 2023 --end-year 2026
+python -m reclume.cli oecd --limit 2000
+python -m reclume.cli extract
+python -m reclume.cli stats
 ```
 
 Raw responses are cached under `data/raw/`, so re-runs do not re-hit the APIs.

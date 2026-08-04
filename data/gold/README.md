@@ -7,11 +7,11 @@ hours of human judgement and cannot be recovered if lost.
 ## Workflow
 
 ```bash
-python -m recallblind.cli gold-sample                 # 300 records, fixed seed
-python -m recallblind.cli annotate onat --limit 50    # label a session at a time
-python -m recallblind.cli annotate <second-name>      # independently, same items
-python -m recallblind.cli agreement data/gold/onat.jsonl data/gold/<second>.jsonl
-python -m recallblind.cli extractor-score data/gold/*.jsonl
+python -m reclume.cli gold-sample                 # 300 records, fixed seed
+python -m reclume.cli annotate onat --limit 50    # label a session at a time
+python -m reclume.cli annotate <second-name>      # independently, same items
+python -m reclume.cli agreement data/gold/onat.jsonl data/gold/<second>.jsonl
+python -m reclume.cli extractor-score data/gold/*.jsonl
 ```
 
 Both annotators label the same sample: `gold-sample` is seeded, so it is
